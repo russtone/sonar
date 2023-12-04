@@ -6,7 +6,7 @@ import (
 
 type Config struct {
 	DSN        string `json:"dsn"`
-	Migrations string `json:"migrations" default:"/opt/app/migrations"`
+	Migrations string `json:"migrations"`
 }
 
 func (c Config) Validate() error {

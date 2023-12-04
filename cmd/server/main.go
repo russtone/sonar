@@ -4,11 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/russtone/sonar/internal/actionsdb"
 	"github.com/russtone/sonar/internal/cache"
@@ -21,7 +25,31 @@ import (
 	"github.com/russtone/sonar/pkg/smtpx"
 )
 
+var (
+	cfg     server.Config
+	cfgFile string
+)
+
+func init() {
+	validation.ErrorTag = "json"
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
+}
+
+var rootCmd = &cobra.Command{
+	Use:   "server",
+	Short: "Sonar server CLI",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("%+v\n", cfg)
+	},
+}
+
 func main() {
+	rootCmd.Execute()
+}
+
+func _main() {
 
 	//
 	// Logger
@@ -275,4 +303,23 @@ func main() {
 
 	// Wait forever
 	select {}
+}
+
+func initConfig() {
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	}
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("/etc/sonar")
+
+	viper.SetEnvPrefix("sonar")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	cobra.CheckErr(viper.ReadInConfig())
+	cobra.CheckErr(viper.Unmarshal(&cfg))
+	cobra.CheckErr(cfg.Validate())
 }
